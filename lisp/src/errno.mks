@@ -1,0 +1,17 @@
+const get_errno_string = () -> String => (
+    @native "#include <errno.h>";
+    @native "#include <string.h>";
+    let desc :: C_String = @native "strerror(errno)";
+    let length :: UInt = @native "strlen(desc)";
+    let buffer :: C_String = C_String_allocate(add[UInt](length, 1));
+    @native "strcpy(\(buffer), \(desc))";
+    {
+        .contents = desc,
+        .length = length,
+    }
+);
+
+const panic_with_errno = () => (
+    let message = get_errno_string();
+    panic(message);
+);

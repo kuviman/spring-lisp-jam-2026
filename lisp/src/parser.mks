@@ -1,0 +1,105 @@
+const Parser_skip_whitespace = (reader :: &Reader) => (
+    unwindable loop @loop (
+        let peek = Reader_peek(reader);
+        if not(peek.has_value) then (
+            unwind loop with ();
+        );
+        if not(Char_is_whitespace(peek.value)) then (
+            unwind loop with ();
+        );
+        Reader_advance(reader);
+    );
+);
+
+const Parser_expect_char = (reader :: &Reader, c :: Char) => (
+    let peek = Reader_peek(reader);
+    if not(peek.has_value) then (
+        panic("Expected ')', got EOF");
+    );
+    if not_equal[Char](peek.value, c) then (
+        panic("Expected TODO"); # TODO
+    );
+);
+
+const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable f (
+    Parser_skip_whitespace(reader);
+    let start = reader^.position;
+    let peek = Reader_peek(reader);
+    if not(peek.has_value) then (
+        unwind f with None[Sexpr]();
+    );
+    if equal[Char](peek.value, ')') then (
+        unwind f with None[Sexpr]();
+    );
+    let result :: Sexpr = uninitialized;
+    if equal[Char](peek.value, '(') then (
+        Reader_advance(reader);
+        let list = ArrayList_new[Sexpr]();
+        unwindable loop @loop (
+            let next = parse_sexpr(reader);
+            if next.has_value then (
+                ArrayList_push_back[Sexpr](&list, next.value);
+            ) else (
+                unwind loop with ();
+            );
+        );
+        peek = Reader_peek(reader);
+        Parser_expect_char(reader, ')');
+        Reader_advance(reader);
+        result.kind = :List;
+        result.value = { .list = list };
+    ) else if equal[Char](peek.value, '"') then (
+        Reader_advance(reader);
+        let start_pos = reader^.position;
+        unwindable loop @loop (
+            peek = Reader_peek(reader);
+            if not(peek.has_value) then (
+                unwind loop with ();
+            );
+            if equal[Char](peek.value, '"') then (
+                unwind loop with ();
+            );
+            Reader_advance(reader);
+        );
+        let string = substring(
+            &reader^.source.contents,
+            start_pos.index,
+            reader^.position.index,
+        );
+        Parser_expect_char(reader, '"');
+        Reader_advance(reader);
+        result.kind = :String;
+        result.value = { .string = string };
+    ) else (
+        let start_pos = reader^.position;
+        unwindable loop @loop (
+            peek = Reader_peek(reader);
+            if not(peek.has_value) then (
+                unwind loop with ();
+            );
+            if Char_is_whitespace(peek.value) then (
+                unwind loop with ();
+            );
+            if equal[Char](peek.value, '(') then (
+                unwind loop with ();
+            );
+            if equal[Char](peek.value, ')') then (
+                unwind loop with ();
+            );
+            Reader_advance(reader);
+        );
+        let atom :: StringView = substring(
+            &reader^.source.contents,
+            start_pos.index,
+            reader^.position.index,
+        );
+        result.kind = :Atom;
+        result.value = { .atom = atom };
+    );
+    result.span = {
+        .path = reader^.source.path,
+        .start = start,
+        .end = reader^.position,
+    };
+    Some[Sexpr](result)
+);

@@ -1,0 +1,71 @@
+const PrintContextT = struct {
+    .printed_indentation :: Bool,
+    .indentation :: Int,
+};
+
+const PrintContext_new = () -> PrintContextT => {
+    .printed_indentation = false,
+    .indentation = 0,
+};
+
+const PrintContext = @context PrintContextT;
+
+const inc_indentation = () => (
+    inc[Int](&(@current PrintContext).indentation);
+);
+
+const dec_indentation = () => (
+    dec[Int](&(@current PrintContext).indentation);
+);
+
+const write_String = (s :: StringView) => (
+    @native "#include <stdio.h>";
+    @native "fwrite(\(s.contents), sizeof(char), \(s.length), stdout)";
+);
+
+const print_String = (s :: StringView) => (
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, s.length) then (
+            unwind loop with ();
+        );
+        let c = String_index(&s, i);
+        print_Char(c);
+        inc[UInt](&i);
+    );
+);
+
+const print_indentation_if_not_yet = () => (
+    let ctx = &(@current PrintContext);
+    if not(ctx^.printed_indentation) then (
+        let i = ctx^.indentation;
+        unwindable loop @loop (
+            if equal[Int](i, 0) then (
+                unwind loop with ();
+            );
+            write_String("  ");
+            dec[Int](&i);
+        );
+        ctx^.printed_indentation = true;
+    );
+);
+
+const print_Char = (c :: Char) => (
+    if equal[Char](c, '\n') then (
+        (@current PrintContext).printed_indentation = false;
+    ) else (
+        print_indentation_if_not_yet();
+    );
+    @native "#include <stdio.h>";
+    @native "printf(\"%c\", \(c))";
+);
+
+const print_Int = (x :: Int) => (
+    @native "#include <stdio.h>";
+    @native "printf(\"%d\", \(x))";
+);
+
+const print_Int32 = (x :: Int32) => (
+    @native "#include <stdio.h>";
+    @native "printf(\"%d\", \(x))";
+);

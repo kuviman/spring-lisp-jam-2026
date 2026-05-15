@@ -1,0 +1,27 @@
+const Position = struct {
+    .index :: UInt,
+    .line :: Int,
+    .column :: Int,
+};
+
+const Position_beginning :: Position = {
+    .index = 0,
+    .line = 0,
+    .column = 0,
+};
+
+const Position_advance = (p :: &Position, c :: Char) => (
+    p^.index = add[UInt](p^.index, 1);
+    if equal[Char](c, '\n') then (
+        p^.line = add[Int](p^.line, 1);
+        p^.column = 0;
+    ) else (
+        p^.column = add[Int](p^.column, 1);
+    );
+);
+
+const Position_print = (p :: Position) => (
+    print_Int(add[Int](p.line, 1));
+    print_Char('.');
+    print_Int(add[Int](p.column, 1));
+);

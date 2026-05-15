@@ -1,0 +1,13 @@
+const Span = struct {
+    .path :: String,
+    .start :: Position,
+    .end :: Position,
+};
+
+const Span_print = (span :: &Span) => (
+    print_String(span^.path);
+    print_Char(':');
+    Position_print(span^.start);
+    print_Char('-');
+    Position_print(span^.end);
+);

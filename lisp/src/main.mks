@@ -1,0 +1,26 @@
+const main = () => (
+    with PrintContext = PrintContext_new();
+    unwindable block (
+        with PanicHandler = (
+            (s :: String) => (
+                print_String("ERROR: ");
+                print_String(s);
+                print_String("\n");
+                unwind block with ();
+            )
+        );
+
+        let path = "src/main.kl";
+        let source = Source_read_file(path);
+        let reader = Reader_new(source);
+        unwindable loop @loop (
+            let sexpr = parse_sexpr(&reader);
+            if sexpr.has_value then (
+                Sexpr_print(&sexpr.value, true);
+                print_String("\n");
+            ) else (
+                unwind loop with ();
+            );
+        );
+    );
+);

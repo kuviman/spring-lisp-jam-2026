@@ -1,0 +1,60 @@
+const SexprKind = enum {
+    | :Atom
+    | :List
+    | :String
+};
+
+const SexprValue = union {
+    .atom :: String,
+    .list :: ArrayList[Sexpr],
+    .string :: String,
+};
+
+const Sexpr = struct {
+    .kind :: SexprKind,
+    .value :: SexprValue,
+    .span :: Span,
+};
+
+const Sexpr_print = (sexpr :: &Sexpr, multi_line :: Bool) => (
+    if sexpr^.kind == :Atom then (
+        print_String(sexpr^.value.atom);
+    ) else if sexpr^.kind == :List then (
+        print_String("(");
+        if multi_line then (
+            print_String("\n");
+            inc_indentation();
+        );
+        let list = &sexpr^.value.list;
+        let i :: UInt = 0;
+        unwindable loop @loop (
+            if greater_or_equal[UInt](i, list^.length) then (
+                unwind loop with ();
+            );
+            if not(multi_line) then (
+                if not_equal[UInt](i, 0) then (
+                    print_String(" ");
+                );
+            );
+            Sexpr_print(ArrayList_index[Sexpr](list, i), multi_line);
+            if multi_line then (
+                print_Char('\n');
+            );
+            i = add[UInt](i, 1);
+        );
+        if multi_line then (
+            dec_indentation();
+        );
+        print_String(")");
+    ) else if sexpr^.kind == :String then (
+        print_Char('"');
+        print_String(sexpr^.value.string);
+        print_Char('"');
+    ) else (
+        panic("Unmatched sexpr kind");
+    );
+    if multi_line then (
+        print_String(" at ");
+        Span_print(&sexpr^.span);
+    );
+);

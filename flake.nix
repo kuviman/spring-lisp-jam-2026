@@ -35,6 +35,7 @@
           RAYLIB = "${raylib}";
           RAYLIB_WEB = "${inputs.kast.packages.${system}.raylib-web}/libraylib.web.a";
           KAST_PATH = "${inputs.kast.packages.${system}.kast-path}";
+          MINICORO_INCLUDE = "${inputs.kast}/deps/minicoro";
         };
       });
 }

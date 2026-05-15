@@ -1,0 +1,6 @@
+# TODO should be String but its an alias and there is an issue in minikast
+const PanicHandler = @context ((StringView) -> ());
+
+const panic = (message :: String) => (
+    (@current PanicHandler)(message);
+);

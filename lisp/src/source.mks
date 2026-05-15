@@ -1,0 +1,27 @@
+const Source = struct {
+    .contents :: String,
+    .path :: String,
+};
+
+@native
+const FILE = @opaque_type;
+
+const Source_read_file = (path :: String) -> Source => (
+    let path_c = String_to_C_String(path);
+    let file :: &FILE = @native "fopen(\(path_c), \"r\")";
+    if @native "!\(file)" then (
+        panic_with_errno();
+    );
+    @native "fseek(\(file), 0, SEEK_END)";
+    let length :: UInt = @native "ftell(\(file))";
+    @native "fseek(\(file), 0, SEEK_SET)";
+    let buffer = C_String_allocate(length);
+    @native "fread(\(buffer), 1, length, \(file))";
+    {
+        .contents = {
+            .contents = buffer,
+            .length = length,
+        },
+        .path = path,
+    }
+);

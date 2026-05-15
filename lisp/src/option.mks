@@ -1,0 +1,14 @@
+const Option = [T] struct {
+    .has_value :: Bool,
+    .value :: T,
+};
+
+const Some = [T] (value :: T) -> Option[T] => {
+    .has_value = true,
+    .value = value,
+};
+
+const None = [T] () -> Option[T] => {
+    .has_value = false,
+    .value = uninitialized,
+};

@@ -1,0 +1,26 @@
+const Reader = struct {
+    .source :: Source,
+    .position :: Position,
+};
+
+const Reader_new = (source :: Source) -> Reader => {
+    .source = source,
+    .position = Position_beginning,
+};
+
+const Reader_peek = (reader :: &Reader) -> Option[Char] => (
+    if less[UInt](reader^.position.index, reader^.source.contents.length) then (
+        Some[Char](String_index(&reader^.source.contents, reader^.position.index))
+    ) else (
+        None[Char]()
+    )
+);
+
+const Reader_advance = (reader :: &Reader) => (
+    let peek = Reader_peek(reader);
+    if peek.has_value then (
+        Position_advance(&reader^.position, peek.value);
+    ) else (
+        panic("Advancing past the EOF");
+    );
+);

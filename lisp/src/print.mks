@@ -23,6 +23,32 @@ const write_String = (s :: StringView) => (
     @native "fwrite(\(s.contents), sizeof(char), \(s.length), stdout)";
 );
 
+const Char_escape = (c :: Char) -> Option[String] => unwindable return_ (
+    if equal[Char](c, '\n') then (
+        unwind return_ with Some[String]("\\n");
+    );
+    None[String]()
+);
+
+const print_String_escaped = (s :: String) => (
+    print_Char('"');
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, s.length) then (
+            unwind loop with ();
+        );
+        let c = String_index(&s, i);
+        let escaped = Char_escape(c);
+        if escaped.has_value then (
+            print_String(escaped.value);
+        ) else (
+            print_Char(c);
+        );
+        inc[UInt](&i);
+    );
+    print_Char('"');
+);
+
 const print_String = (s :: StringView) => (
     let i :: UInt = 0;
     unwindable loop @loop (

@@ -1,0 +1,38 @@
+const add_natives = (locals :: &ArrayList[Local]) => (
+    add_native_fn(locals, "print", native_print);
+);
+
+const add_native_fn = (
+    locals :: &ArrayList[Local],
+    name :: String,
+    f :: (ArrayList[Value]) -> Value,
+) => (
+    ArrayList_push_back[Local](
+        locals,
+        {
+            .name = name,
+            .value = {
+                .kind = :NativeFn,
+                .data = { .native_fn = f },
+            },
+        }
+    );
+);
+
+const native_print = (args :: ArrayList[Value]) -> Value => (
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, args.length) then (
+            unwind loop with ();
+        );
+        let arg = ArrayList_index[Value](&args, i);
+        if arg^.kind == :String then (
+            print_String(arg^.data.string);
+        ) else (
+            Value_print(arg);
+        );
+        inc[UInt](&i);
+    );
+    print_Char('\n');
+    { .kind = :Unit, .data = { .unit = 0 } }
+);

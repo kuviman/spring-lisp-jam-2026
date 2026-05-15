@@ -19,6 +19,14 @@ const String_index = (s :: &String, i :: UInt) -> Char => (
     @native "\(s^.contents)[\(i)]"
 );
 
+const String_equal = (a :: String, b :: String) -> Bool => (
+    if not_equal[UInt](a.length, b.length) then (
+        false
+    ) else (
+        @native "memcmp(\(a.contents), \(b.contents), \(a.length)) == 0"
+    )
+);
+
 const substring = (s :: &StringView, start :: UInt, end :: UInt) -> StringView => (
     {
         .contents = @native "\(s^.contents) + \(start)",

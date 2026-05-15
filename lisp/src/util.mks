@@ -17,3 +17,8 @@ const inc = [T] (x :: &T) => (
 const dec = [T] (x :: &T) => (
     x^ = sub[T](x^, 1);
 );
+
+const unreachable = [T] () -> T => (
+    panic("unreachable was reached");
+    uninitialized
+);

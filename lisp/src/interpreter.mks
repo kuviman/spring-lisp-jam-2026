@@ -1,0 +1,150 @@
+const Interpreter = struct {
+    .global_scope :: Scope,
+};
+
+const InterpreterCtx = @context Interpreter;
+
+const Interpreter_new = () -> Interpreter => {
+    .global_scope = {
+        .parent = None[&Scope](),
+        .locals = (
+            let locals = ArrayList_new[Local]();
+            add_natives(&locals);
+            locals
+        ),
+    }
+};
+
+const Local = struct {
+    .name :: String,
+    .value :: Value,
+};
+
+const Scope = struct {
+    .parent :: Option[&Scope],
+    .locals :: ArrayList[Local],
+};
+
+const ScopeCtx = @context &Scope;
+
+const lookup_var_in_scope = (name :: String, scope :: &Scope) -> Value => unwindable return_ (
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, scope^.locals.length) then (
+            unwind loop with ();
+        );
+        let local = ArrayList_index[Local](&scope^.locals, i);
+        if String_equal(local^.name, name) then (
+            unwind return_ with local^.value;
+        );
+        inc[UInt](&i);
+    );
+    if scope^.parent.has_value then (
+        lookup_var_in_scope(name, scope^.parent.value)
+    ) else (
+        panic("Could not find var in scope"); # TODO
+        unreachable[Value]()
+    )
+);
+
+const lookup_var = (name :: String) -> Value => (
+    lookup_var_in_scope(name, @current ScopeCtx)
+);
+
+const ValueKind = enum {
+    | :Unit
+    | :String
+    | :NativeFn
+    | :Sexpr
+};
+
+const ValueData = union {
+    .unit :: Int, # TODO () isnt working properly, should fix in minikast
+    .string :: String,
+    .native_fn :: (ArrayList[Value]) -> Value,
+    .sexpr :: Sexpr,
+};
+
+const Value = struct {
+    .kind :: ValueKind,
+    .data :: ValueData,
+};
+
+const Value_print = (value :: &Value) => (
+    if value^.kind == :Unit then (
+        print_String("()");
+    ) else if value^.kind == :String then (
+        print_String_escaped(value^.data.string);
+    ) else if value^.kind == :Sexpr then (
+        Sexpr_print(&value^.data.sexpr, true);
+    ) else (
+        panic("Unmatched value kind in Value_print");
+    );
+);
+# TODO minikast has a bug if i use this alias
+const EvalHandler = type (&ArrayList[Sexpr]) -> Value;
+
+const eval_quote = (args :: &ArrayList[Sexpr]) -> Value => (
+    if not_equal[UInt](args^.length, 2) then (
+        panic("quote expects exactly 1 arg");
+    );
+    {
+        .kind = :Sexpr,
+        .data = { .sexpr = ArrayList_index[Sexpr](args, 1)^ },
+    }
+);
+
+const eval_call = (f :: Value, args :: ArrayList[Value]) -> Value => unwindable return_ (
+    if f.kind == :NativeFn then (
+        unwind return_ with f.data.native_fn(args);
+    );
+    panic("TODO call");
+    unreachable[Value]()
+);
+
+const eval = (sexpr :: &Sexpr) -> Value => unwindable return_ (
+    if sexpr^.kind == :String then (
+        unwind return_ with {
+            .kind = :String,
+            .data = { .string = sexpr^.value.string },
+        };
+    );
+    if sexpr^.kind == :Atom then (
+        unwind return_ with lookup_var(sexpr^.value.atom);
+    );
+    if sexpr^.kind == :List then (
+        let list = sexpr^.value.list;
+        if equal[UInt](list.length, 0) then (
+            unwind return_ with {
+                .kind = :Unit,
+                .data = { .unit = 0 },
+            };
+        );
+        let first = ArrayList_index[Sexpr](&list, 0);
+        if first^.kind == :Atom then (
+            let atom = first^.value.atom;
+            let handler :: Option[(&ArrayList[Sexpr]) -> Value] = unwindable block (
+                if String_equal(atom, "quote") then (
+                    unwind block with Some[(&ArrayList[Sexpr]) -> Value](eval_quote);
+                );
+                None[(&ArrayList[Sexpr]) -> Value]()
+            );
+            if handler.has_value then (
+                unwind return_ with handler.value(&list);
+            );
+        );
+        let fun = eval(first);
+        let args = ArrayList_new[Value]();
+        let i :: UInt = 1;
+        unwindable loop @loop (
+            if greater_or_equal[UInt](i, list.length) then (
+                unwind loop with ();
+            );
+            ArrayList_push_back[Value](&args, eval(ArrayList_index[Sexpr](&list, i)));
+            inc[UInt](&i);
+        );
+        unwind return_ with eval_call(fun, args);
+    );
+    panic("Unmatched sexpr kind in eval");
+    unreachable[Value]()
+);

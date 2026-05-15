@@ -47,9 +47,7 @@ const Sexpr_print = (sexpr :: &Sexpr, multi_line :: Bool) => (
         );
         print_String(")");
     ) else if sexpr^.kind == :String then (
-        print_Char('"');
-        print_String(sexpr^.value.string);
-        print_Char('"');
+        print_String_escaped(sexpr^.value.string);
     ) else (
         panic("Unmatched sexpr kind");
     );

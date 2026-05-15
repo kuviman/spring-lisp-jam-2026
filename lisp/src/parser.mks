@@ -21,15 +21,15 @@ const Parser_expect_char = (reader :: &Reader, c :: Char) => (
     );
 );
 
-const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable f (
+const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable return_ (
     Parser_skip_whitespace(reader);
     let start = reader^.position;
     let peek = Reader_peek(reader);
     if not(peek.has_value) then (
-        unwind f with None[Sexpr]();
+        unwind return_ with None[Sexpr]();
     );
     if equal[Char](peek.value, ')') then (
-        unwind f with None[Sexpr]();
+        unwind return_ with None[Sexpr]();
     );
     let result :: Sexpr = uninitialized;
     if equal[Char](peek.value, '(') then (

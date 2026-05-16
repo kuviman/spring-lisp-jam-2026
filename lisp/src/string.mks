@@ -1,6 +1,17 @@
 const String_to_C_String = (s :: String) -> C_String => (
-    # TODO
-    s.contents
+    let cstr = C_String_allocate(add[UInt](s.length, 1));
+    @native "memcpy(\(cstr), \(s.contents), \(s.length))";
+    C_String_index(&cstr, s.length)^ = @native "0"; # TODO '\0'
+    cstr
+);
+
+const C_String_into_String = (cstr :: C_String) -> String => {
+    .length = C_String_length(&cstr),
+    .contents = cstr,
+};
+
+const C_String_length = (s :: &C_String) -> UInt => (
+    @native "strlen(\(s^))"
 );
 
 const C_String_allocate = (length :: UInt) -> C_String => (
@@ -12,11 +23,19 @@ const C_String_allocate = (length :: UInt) -> C_String => (
 );
 
 const String_free = (s :: String) => (
-    @native "free(\(s.contents))";
+    C_String_free(s.contents)
 );
 
-const String_index = (s :: &String, i :: UInt) -> Char => (
-    @native "\(s^.contents)[\(i)]"
+const C_String_free = (s :: C_String) => (
+    @native "free(\(s))";
+);
+
+const String_index = (s :: &String, i :: UInt) -> &Char => (
+    C_String_index(&s^.contents, i)
+);
+
+const C_String_index = (s :: &C_String, i :: UInt) -> &Char => (
+    @native "&\(s^)[\(i)]"
 );
 
 const String_equal = (a :: String, b :: String) -> Bool => (

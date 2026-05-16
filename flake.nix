@@ -26,6 +26,7 @@
             emscripten
             caddy
             butler
+            readline
           ];
           shellHook = ''
             echo Hello from Kast dev shell

@@ -1,0 +1,43 @@
+const read_line = (prompt :: String) -> String => (
+    @native "#include <readline/readline.h>";
+    @native "#include <readline/history.h>";
+    let c_prompt = String_to_C_String(prompt);
+    let cstr :: C_String = @native "readline(\(c_prompt))";
+    C_String_free(c_prompt);
+    C_String_into_String(cstr)
+);
+
+const run_repl = () => (
+    with InterpreterCtx = Interpreter_new();
+    with ScopeCtx = &(@current InterpreterCtx).global_scope;
+
+    unwindable repl @loop (
+        let line = read_line("> ");
+        let source :: Source = {
+            .contents = line,
+            .path = "<repl>",
+        };
+        let reader = Reader_new(source);
+        unwindable parse_loop @loop (
+            with ErrorHandlerCtx = {
+                .error_at = (span :: Span, message :: () -> ()) => (
+                    log_error_at(span, message);
+                    unwind parse_loop with ();
+                ),
+            };
+            let sexpr = parse_sexpr(&reader);
+            if sexpr.has_value then (
+                # Sexpr_print(&sexpr.value, true);
+                # print_String("\n"); 
+                let value = eval(&sexpr.value);
+                if value.kind == :Unit then () else (
+                    Value_print(&value);
+                    print_Char('\n');
+                );
+            ) else (
+                Reader_expect_eof(&reader);
+                unwind parse_loop with ();
+            );
+        );
+    );
+);

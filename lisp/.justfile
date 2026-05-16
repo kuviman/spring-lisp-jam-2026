@@ -17,6 +17,7 @@ compile-c:
         -I $MINICORO_INCLUDE \
         -lm \
         -lraylib \
+        -lreadline \
         -o target/main
 
 build:

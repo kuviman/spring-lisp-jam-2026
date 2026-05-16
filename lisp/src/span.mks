@@ -4,10 +4,18 @@ const Span = struct {
     .end :: Position,
 };
 
+const Span_zero_width = (path :: String, pos :: Position) -> Span => {
+    .path = path,
+    .start = pos,
+    .end = pos,
+};
+
 const Span_print = (span :: &Span) => (
     print_String(span^.path);
     print_Char(':');
     Position_print(span^.start);
-    print_Char('-');
-    Position_print(span^.end);
+    if not_equal[UInt](span^.start.index, span^.end.index) then (
+        print_Char('-');
+        Position_print(span^.end);
+    );
 );

@@ -1,0 +1,16 @@
+const ErrorHandler = struct {
+    .error_at :: (span :: Span, message :: () -> ()) -> (),
+};
+const ErrorHandlerCtx = @context ErrorHandler;
+
+const error_at = (span :: Span, message :: () -> ()) => (
+    (@current ErrorHandlerCtx).error_at(span, message);
+);
+
+const log_error_at = (span :: Span, message :: () -> ()) => (
+    print_String("ERROR at ");
+    Span_print(&span);
+    print_String(":\n");
+    message();
+    print_Char('\n');
+);

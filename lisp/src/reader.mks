@@ -10,10 +10,24 @@ const Reader_new = (source :: Source) -> Reader => {
 
 const Reader_peek = (reader :: &Reader) -> Option[Char] => (
     if less[UInt](reader^.position.index, reader^.source.contents.length) then (
-        Some[Char](String_index(&reader^.source.contents, reader^.position.index))
+        Some[Char](String_index(&reader^.source.contents, reader^.position.index)^)
     ) else (
         None[Char]()
     )
+);
+
+const Reader_expect_eof = (reader :: &Reader) => (
+    let peek = Reader_peek(reader);
+    if peek.has_value then (
+        error_at(
+            Span_zero_width(reader^.source.path, reader^.position),
+            () => (
+                print_String("Expected EOF, got '");
+                print_Char(peek.value);
+                print_String("'");
+            ),
+        );
+    );
 );
 
 const Reader_advance = (reader :: &Reader) => (

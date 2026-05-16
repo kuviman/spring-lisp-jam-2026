@@ -14,10 +14,26 @@ const Parser_skip_whitespace = (reader :: &Reader) => (
 const Parser_expect_char = (reader :: &Reader, c :: Char) => (
     let peek = Reader_peek(reader);
     if not(peek.has_value) then (
-        panic("Expected ')', got EOF");
+        error_at(
+            Span_zero_width(reader^.source.path, reader^.position),
+            () => (
+                print_String("Expected '");
+                print_Char(c);
+                print_String("', got EOF");
+            ),
+        );
     );
     if not_equal[Char](peek.value, c) then (
-        panic("Expected TODO"); # TODO
+        error_at(
+            Span_zero_width(reader^.source.path, reader^.position),
+            () => (
+                print_String("Expected '");
+                print_Char(c);
+                print_String("', got '");
+                print_Char(peek.value);
+                print_String("'");
+            ),
+        );
     );
 );
 

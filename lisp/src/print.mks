@@ -37,7 +37,7 @@ const print_String_escaped = (s :: String) => (
         if greater_or_equal[UInt](i, s.length) then (
             unwind loop with ();
         );
-        let c = String_index(&s, i);
+        let c = String_index(&s, i)^;
         let escaped = Char_escape(c);
         if escaped.has_value then (
             print_String(escaped.value);
@@ -55,7 +55,7 @@ const print_String = (s :: StringView) => (
         if greater_or_equal[UInt](i, s.length) then (
             unwind loop with ();
         );
-        let c = String_index(&s, i);
+        let c = String_index(&s, i)^;
         print_Char(c);
         inc[UInt](&i);
     );

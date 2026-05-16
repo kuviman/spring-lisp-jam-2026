@@ -1,34 +1,13 @@
 const main = () => (
-    with PrintContext = PrintContext_new();
-    unwindable block (
-        with PanicHandler = (
-            (s :: String) => (
-                print_String("ERROR: ");
-                print_String(s);
-                print_String("\n");
-                unwind block with ();
-            )
-        );
-
-        with InterpreterCtx = Interpreter_new();
-        with ScopeCtx = &(@current InterpreterCtx).global_scope;
-
-        let path = "src/main.kl";
-        let source = Source_read_file(path);
-        let reader = Reader_new(source);
-        unwindable loop @loop (
-            let sexpr = parse_sexpr(&reader);
-            if sexpr.has_value then (
-                # Sexpr_print(&sexpr.value, true);
-                # print_String("\n"); 
-                let value = eval(&sexpr.value);
-                if value.kind == :Unit then () else (
-                    Value_print(&value);
-                    print_Char('\n');
-                );
-            ) else (
-                unwind loop with ();
-            );
-        );
+    with PanicHandler = (
+        (s :: String) => (
+            print_String("ERROR: ");
+            print_String(s);
+            print_String("\n");
+            @native "exit(-1)";
+        )
     );
+
+    with PrintContext = PrintContext_new();
+    run_repl();
 );

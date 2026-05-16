@@ -96,11 +96,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1778875350,
-        "narHash": "sha256-BC2TXx2DtO1KHm5gyM3iuUBZYI03a9GDzGjD83oeFkQ=",
+        "lastModified": 1778928612,
+        "narHash": "sha256-wye3kbcHtigUPDyeg1LhqB9gAGkicSzAUSOOUrG/GGk=",
         "ref": "self-host",
-        "rev": "fddd1a1c7fb203a9cdb234a4edd639a7af245c74",
-        "revCount": 207,
+        "rev": "a4cf00c45dc50b5dc9de4841da7475486d46180e",
+        "revCount": 211,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/kast-lang/kast"

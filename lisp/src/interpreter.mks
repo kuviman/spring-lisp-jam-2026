@@ -27,7 +27,7 @@ const Scope = struct {
 
 const ScopeCtx = @context &Scope;
 
-const lookup_var_in_scope = (name :: String, scope :: &Scope) -> Value => unwindable return_ (
+const lookup_var_in_scope = (span :: Span, name :: String, scope :: &Scope) -> Value => unwindable return_ (
     let i :: UInt = 0;
     unwindable loop @loop (
         if greater_or_equal[UInt](i, scope^.locals.length) then (
@@ -40,15 +40,22 @@ const lookup_var_in_scope = (name :: String, scope :: &Scope) -> Value => unwind
         inc[UInt](&i);
     );
     if scope^.parent.has_value then (
-        lookup_var_in_scope(name, scope^.parent.value)
+        lookup_var_in_scope(span, name, scope^.parent.value)
     ) else (
-        panic("Could not find var in scope"); # TODO
+        error_at(
+            span,
+            () => (
+                print_String("Could not find ");
+                print_String(name);
+                print_String(" in scope");
+            ),
+        );
         unreachable[Value]()
     )
 );
 
-const lookup_var = (name :: String) -> Value => (
-    lookup_var_in_scope(name, @current ScopeCtx)
+const lookup_var = (span :: Span, name :: String) -> Value => (
+    lookup_var_in_scope(span, name, @current ScopeCtx)
 );
 
 const ValueKind = enum {
@@ -82,11 +89,14 @@ const Value_print = (value :: &Value) => (
     );
 );
 # TODO minikast has a bug if i use this alias
-const EvalHandler = type (&ArrayList[Sexpr]) -> Value;
+const EvalHandler = type (Span, &ArrayList[Sexpr]) -> Value;
 
-const eval_quote = (args :: &ArrayList[Sexpr]) -> Value => (
+const eval_quote = (span :: Span, args :: &ArrayList[Sexpr]) -> Value => (
     if not_equal[UInt](args^.length, 2) then (
-        panic("quote expects exactly 1 arg");
+        error_at(
+            span,
+            () => print_String("quote expects exactly 1 arg"),
+        );
     );
     {
         .kind = :Sexpr,
@@ -110,7 +120,7 @@ const eval = (sexpr :: &Sexpr) -> Value => unwindable return_ (
         };
     );
     if sexpr^.kind == :Atom then (
-        unwind return_ with lookup_var(sexpr^.value.atom);
+        unwind return_ with lookup_var(sexpr^.span, sexpr^.value.atom);
     );
     if sexpr^.kind == :List then (
         let list = sexpr^.value.list;
@@ -123,14 +133,14 @@ const eval = (sexpr :: &Sexpr) -> Value => unwindable return_ (
         let first = ArrayList_index[Sexpr](&list, 0);
         if first^.kind == :Atom then (
             let atom = first^.value.atom;
-            let handler :: Option[(&ArrayList[Sexpr]) -> Value] = unwindable block (
+            let handler :: Option[(Span, &ArrayList[Sexpr]) -> Value] = unwindable block (
                 if String_equal(atom, "quote") then (
-                    unwind block with Some[(&ArrayList[Sexpr]) -> Value](eval_quote);
+                    unwind block with Some[(Span, &ArrayList[Sexpr]) -> Value](eval_quote);
                 );
-                None[(&ArrayList[Sexpr]) -> Value]()
+                None[(Span, &ArrayList[Sexpr]) -> Value]()
             );
             if handler.has_value then (
-                unwind return_ with handler.value(&list);
+                unwind return_ with handler.value(sexpr^.span, &list);
             );
         );
         let fun = eval(first);

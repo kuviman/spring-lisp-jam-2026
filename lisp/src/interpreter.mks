@@ -65,10 +65,15 @@ const ValueKind = enum {
     | :Sexpr
 };
 
+const NativeFn = struct {
+    .name :: String,
+    .f :: (ArrayList[Value]) -> Value,
+};
+
 const ValueData = union {
     .unit :: Int, # TODO () isnt working properly, should fix in minikast
     .string :: String,
-    .native_fn :: (ArrayList[Value]) -> Value,
+    .native_fn :: NativeFn,
     .sexpr :: Sexpr,
 };
 
@@ -84,6 +89,10 @@ const Value_print = (value :: &Value) => (
         print_String_escaped(value^.data.string);
     ) else if value^.kind == :Sexpr then (
         Sexpr_print(&value^.data.sexpr, true);
+    ) else if value^.kind == :NativeFn then (
+        print_String("<native fn ");
+        print_String(value^.data.native_fn.name);
+        print_String(">");
     ) else (
         panic("Unmatched value kind in Value_print");
     );
@@ -104,11 +113,22 @@ const eval_quote = (span :: Span, args :: &ArrayList[Sexpr]) -> Value => (
     }
 );
 
-const eval_call = (f :: Value, args :: ArrayList[Value]) -> Value => unwindable return_ (
+const eval_call = (
+    f_span :: Span,
+    span :: Span,
+    f :: Value,
+    args :: ArrayList[Value],
+) -> Value => unwindable return_ (
     if f.kind == :NativeFn then (
-        unwind return_ with f.data.native_fn(args);
+        unwind return_ with f.data.native_fn.f(args);
     );
-    panic("TODO call");
+    error_at(
+        f_span,
+        () => (
+            print_String("Expected a function, got ");
+            Value_print(&f);
+        ),
+    );
     unreachable[Value]()
 );
 
@@ -153,7 +173,7 @@ const eval = (sexpr :: &Sexpr) -> Value => unwindable return_ (
             ArrayList_push_back[Value](&args, eval(ArrayList_index[Sexpr](&list, i)));
             inc[UInt](&i);
         );
-        unwind return_ with eval_call(fun, args);
+        unwind return_ with eval_call(first^.span, sexpr^.span, fun, args);
     );
     panic("Unmatched sexpr kind in eval");
     unreachable[Value]()

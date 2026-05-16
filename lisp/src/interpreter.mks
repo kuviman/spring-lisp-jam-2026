@@ -27,7 +27,11 @@ const Scope = struct {
 
 const ScopeCtx = @context &Scope;
 
-const lookup_var_in_scope = (span :: Span, name :: String, scope :: &Scope) -> Value => unwindable return_ (
+const lookup_var_in_scope = (
+    span :: Option[Span],
+    name :: String,
+    scope :: &Scope,
+) -> Value => unwindable return_ (
     let i :: UInt = 0;
     unwindable loop @loop (
         if greater_or_equal[UInt](i, scope^.locals.length) then (
@@ -54,68 +58,26 @@ const lookup_var_in_scope = (span :: Span, name :: String, scope :: &Scope) -> V
     )
 );
 
-const lookup_var = (span :: Span, name :: String) -> Value => (
+const lookup_var = (span :: Option[Span], name :: String) -> Value => (
     lookup_var_in_scope(span, name, @current ScopeCtx)
 );
-
-const ValueKind = enum {
-    | :Unit
-    | :String
-    | :NativeFn
-    | :Sexpr
-};
-
-const NativeFn = struct {
-    .name :: String,
-    .f :: (ArrayList[Value]) -> Value,
-};
-
-const ValueData = union {
-    .unit :: Int, # TODO () isnt working properly, should fix in minikast
-    .string :: String,
-    .native_fn :: NativeFn,
-    .sexpr :: Sexpr,
-};
-
-const Value = struct {
-    .kind :: ValueKind,
-    .data :: ValueData,
-};
-
-const Value_print = (value :: &Value) => (
-    if value^.kind == :Unit then (
-        print_String("()");
-    ) else if value^.kind == :String then (
-        print_String_escaped(value^.data.string);
-    ) else if value^.kind == :Sexpr then (
-        Sexpr_print(&value^.data.sexpr, true);
-    ) else if value^.kind == :NativeFn then (
-        print_String("<native fn ");
-        print_String(value^.data.native_fn.name);
-        print_String(">");
-    ) else (
-        panic("Unmatched value kind in Value_print");
-    );
-);
 # TODO minikast has a bug if i use this alias
-const EvalHandler = type (Span, &ArrayList[Sexpr]) -> Value;
+const EvalHandler = type (Span, ArrayList[Value]) -> Value;
 
-const eval_quote = (span :: Span, args :: &ArrayList[Sexpr]) -> Value => (
-    if not_equal[UInt](args^.length, 2) then (
+const eval_quote = (span :: Option[Span], args :: ArrayList[Value]) -> Value => (
+    if not_equal[UInt](args.length, 1) then (
         error_at(
             span,
             () => print_String("quote expects exactly 1 arg"),
         );
     );
-    {
-        .kind = :Sexpr,
-        .data = { .sexpr = ArrayList_index[Sexpr](args, 1)^ },
-    }
+    let result = ArrayList_index[Value](&args, 0)^;
+    result
 );
 
 const eval_call = (
-    f_span :: Span,
-    span :: Span,
+    f_span :: Option[Span],
+    span :: Option[Span],
     f :: Value,
     args :: ArrayList[Value],
 ) -> Value => unwindable return_ (
@@ -132,49 +94,52 @@ const eval_call = (
     unreachable[Value]()
 );
 
-const eval = (sexpr :: &Sexpr) -> Value => unwindable return_ (
-    if sexpr^.kind == :String then (
-        unwind return_ with {
-            .kind = :String,
-            .data = { .string = sexpr^.value.string },
-        };
-    );
-    if sexpr^.kind == :Atom then (
-        unwind return_ with lookup_var(sexpr^.span, sexpr^.value.atom);
+const eval = (sexpr :: &Value) -> Value => unwindable return_ (
+    if sexpr^.kind == :Symbol then (
+        unwind return_ with lookup_var(sexpr^.span, sexpr^.data.symbol);
     );
     if sexpr^.kind == :List then (
-        let list = sexpr^.value.list;
+        let list = sexpr^.data.list;
         if equal[UInt](list.length, 0) then (
             unwind return_ with {
                 .kind = :Unit,
                 .data = { .unit = 0 },
             };
         );
-        let first = ArrayList_index[Sexpr](&list, 0);
-        if first^.kind == :Atom then (
-            let atom = first^.value.atom;
-            let handler :: Option[(Span, &ArrayList[Sexpr]) -> Value] = unwindable block (
-                if String_equal(atom, "quote") then (
-                    unwind block with Some[(Span, &ArrayList[Sexpr]) -> Value](eval_quote);
-                );
-                None[(Span, &ArrayList[Sexpr]) -> Value]()
-            );
-            if handler.has_value then (
-                unwind return_ with handler.value(sexpr^.span, &list);
-            );
-        );
-        let fun = eval(first);
+        let first = ArrayList_index[Value](&list, 0);
         let args = ArrayList_new[Value]();
         let i :: UInt = 1;
         unwindable loop @loop (
             if greater_or_equal[UInt](i, list.length) then (
                 unwind loop with ();
             );
-            ArrayList_push_back[Value](&args, eval(ArrayList_index[Sexpr](&list, i)));
+            ArrayList_push_back[Value](&args, ArrayList_index[Value](&list, i)^);
+            inc[UInt](&i);
+        );
+        if first^.kind == :Symbol then (
+            let symbol = first^.data.symbol;
+            let handler :: Option[(Option[Span], ArrayList[Value]) -> Value] = unwindable block (
+                if String_equal(symbol, "quote") then (
+                    unwind block with Some[(Option[Span], ArrayList[Value]) -> Value](eval_quote);
+                );
+                None[(Option[Span], ArrayList[Value]) -> Value]()
+            );
+            if handler.has_value then (
+                unwind return_ with handler.value(sexpr^.span, args);
+            );
+        );
+        let fun = eval(first);
+        # TODO fix same variable name in C output of minikast
+        i :: UInt = 0;
+        unwindable loop2 @loop (
+            if greater_or_equal[UInt](i, args.length) then (
+                unwind loop2 with ();
+            );
+            let arg = ArrayList_index[Value](&args, i);
+            arg^ = eval(arg);
             inc[UInt](&i);
         );
         unwind return_ with eval_call(first^.span, sexpr^.span, fun, args);
     );
-    panic("Unmatched sexpr kind in eval");
-    unreachable[Value]()
+    sexpr^
 );

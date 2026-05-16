@@ -15,3 +15,11 @@ const panic_with_errno = () => (
     let message = get_errno_string();
     panic(message);
 );
+
+const error_with_errno = (span :: Option[Span]) => (
+    let message = get_errno_string();
+    error_at(
+        span,
+        () => print_String(message),
+    );
+);

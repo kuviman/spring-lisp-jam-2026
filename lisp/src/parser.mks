@@ -15,7 +15,7 @@ const Parser_expect_char = (reader :: &Reader, c :: Char) => (
     let peek = Reader_peek(reader);
     if not(peek.has_value) then (
         error_at(
-            Span_zero_width(reader^.source.path, reader^.position),
+            Some[Span](Span_zero_width(reader^.source.path, reader^.position)),
             () => (
                 print_String("Expected '");
                 print_Char(c);
@@ -25,7 +25,7 @@ const Parser_expect_char = (reader :: &Reader, c :: Char) => (
     );
     if not_equal[Char](peek.value, c) then (
         error_at(
-            Span_zero_width(reader^.source.path, reader^.position),
+            Some[Span](Span_zero_width(reader^.source.path, reader^.position)),
             () => (
                 print_String("Expected '");
                 print_Char(c);
@@ -37,24 +37,24 @@ const Parser_expect_char = (reader :: &Reader, c :: Char) => (
     );
 );
 
-const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable return_ (
+const parse = (reader :: &Reader) -> Option[Value] => unwindable return_ (
     Parser_skip_whitespace(reader);
     let start = reader^.position;
     let peek = Reader_peek(reader);
     if not(peek.has_value) then (
-        unwind return_ with None[Sexpr]();
+        unwind return_ with None[Value]();
     );
     if equal[Char](peek.value, ')') then (
-        unwind return_ with None[Sexpr]();
+        unwind return_ with None[Value]();
     );
-    let result :: Sexpr = uninitialized;
+    let result :: Value = uninitialized;
     if equal[Char](peek.value, '(') then (
         Reader_advance(reader);
-        let list = ArrayList_new[Sexpr]();
+        let list = ArrayList_new[Value]();
         unwindable loop @loop (
-            let next = parse_sexpr(reader);
+            let next = parse(reader);
             if next.has_value then (
-                ArrayList_push_back[Sexpr](&list, next.value);
+                ArrayList_push_back[Value](&list, next.value);
             ) else (
                 unwind loop with ();
             );
@@ -63,7 +63,7 @@ const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable return_ (
         Parser_expect_char(reader, ')');
         Reader_advance(reader);
         result.kind = :List;
-        result.value = { .list = list };
+        result.data = { .list = list };
     ) else if equal[Char](peek.value, '"') then (
         Reader_advance(reader);
         let start_pos = reader^.position;
@@ -85,7 +85,7 @@ const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable return_ (
         Parser_expect_char(reader, '"');
         Reader_advance(reader);
         result.kind = :String;
-        result.value = { .string = string };
+        result.data = { .string = string };
     ) else (
         let start_pos = reader^.position;
         unwindable loop @loop (
@@ -104,18 +104,20 @@ const parse_sexpr = (reader :: &Reader) -> Option[Sexpr] => unwindable return_ (
             );
             Reader_advance(reader);
         );
-        let atom :: StringView = substring(
+        let name :: StringView = substring(
             &reader^.source.contents,
             start_pos.index,
             reader^.position.index,
         );
-        result.kind = :Atom;
-        result.value = { .atom = atom };
+        result.kind = :Symbol;
+        result.data = { .symbol = name };
     );
-    result.span = {
-        .path = reader^.source.path,
-        .start = start,
-        .end = reader^.position,
-    };
-    Some[Sexpr](result)
+    result.span = Some[Span](
+        {
+            .path = reader^.source.path,
+            .start = start,
+            .end = reader^.position,
+        }
+    );
+    Some[Value](result)
 );

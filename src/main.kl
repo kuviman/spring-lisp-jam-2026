@@ -1,1 +1,1 @@
-(log "quoted: " (quote (log "Hello, world!")))
+(print "quoted: " (quote (print "Hello, world!")))

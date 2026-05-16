@@ -1,5 +1,9 @@
 const add_natives = (locals :: &ArrayList[Local]) => (
     add_native_fn(locals, "print", native_print);
+    add_native_fn(locals, "read_file", native_read_file);
+    add_native_fn(locals, "parse", native_parse);
+    add_native_fn(locals, "eval", native_eval);
+    add_native_fn(locals, "values", native_values);
 );
 
 const add_native_fn = (
@@ -40,4 +44,68 @@ const native_print = (args :: ArrayList[Value]) -> Value => (
     );
     print_Char('\n');
     { .kind = :Unit, .data = { .unit = 0 } }
+);
+
+const native_values = (args :: ArrayList[Value]) -> Value => {
+    .kind = :List,
+    .data = { .list = args },
+    .span = None[Span](),
+};
+
+const expect_single_arg = (args :: ArrayList[Value]) -> Value => (
+    if not_equal[UInt](args.length, 1) then (
+        error_at(
+            None[Span](),
+            () => print_String("Expected exactly 1 argument"),
+        );
+    );
+    ArrayList_index[Value](&args, 0)^
+);
+
+const expect_single_string_arg = (args :: ArrayList[Value]) -> String => (
+    let arg = expect_single_arg(args);
+    if arg.kind == :String then () else (
+        error_at(
+            None[Span](),
+            () => (
+                print_String("Expected a string argument, got ");
+                Value_print(&arg);
+            ),
+        );
+    );
+    arg.data.string
+);
+
+const native_read_file = (args :: ArrayList[Value]) -> Value => (
+    let path = expect_single_string_arg(args);
+    let source = Source_read_file(path);
+    {
+        .kind = :String,
+        .data = { .string = source.contents },
+        .span = None[Span](),
+    }
+);
+
+const native_parse = (args :: ArrayList[Value]) -> Value => (
+    let source :: Source = {
+        .contents = expect_single_string_arg(args),
+        .path = "<string>",
+    };
+    let reader = Reader_new(source);
+    let result = parse(&reader);
+    if result.has_value then (
+        Parser_skip_whitespace(&reader);
+        Reader_expect_eof(&reader);
+        result.value
+    ) else (
+        error_at(
+            None[Span](),
+            () => print_String("string did not contain a value"),
+        );
+        unreachable[Value]()
+    )
+);
+
+const native_eval = (args :: ArrayList[Value]) -> Value => (
+    eval(&expect_single_arg(args))
 );

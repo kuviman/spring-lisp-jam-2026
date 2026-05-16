@@ -1,0 +1,70 @@
+const ValueKind = enum {
+    | :Unit
+    | :String
+    | :NativeFn
+    | :Symbol
+    | :List
+};
+
+const NativeFn = struct {
+    .name :: String,
+    .f :: (ArrayList[Value]) -> Value,
+};
+
+const ValueData = union {
+    .unit :: Int, # TODO () isnt working properly, should fix in minikast
+    .string :: String,
+    .native_fn :: NativeFn,
+    .symbol :: String,
+    .list :: ArrayList[Value],
+};
+
+const Value = struct {
+    .kind :: ValueKind,
+    .data :: ValueData,
+    .span :: Option[Span],
+};
+
+const Value_print = (value :: &Value) => (
+    if value^.kind == :Unit then (
+        print_String("()");
+    ) else if value^.kind == :String then (
+        print_String_escaped(value^.data.string);
+    ) else if value^.kind == :NativeFn then (
+        print_String("<native fn ");
+        print_String(value^.data.native_fn.name);
+        print_String(">");
+    ) else if value^.kind == :Symbol then (
+        print_String(value^.data.symbol);
+    ) else if value^.kind == :List then (
+        let multi_line = false;
+        print_String("(");
+        if multi_line then (
+            print_String("\n");
+            inc_indentation();
+        );
+        let list = &value^.data.list;
+        let i :: UInt = 0;
+        unwindable loop @loop (
+            if greater_or_equal[UInt](i, list^.length) then (
+                unwind loop with ();
+            );
+            if not(multi_line) then (
+                if not_equal[UInt](i, 0) then (
+                    print_String(" ");
+                );
+            );
+            Value_print(ArrayList_index[Value](list, i));
+            if multi_line then (
+                print_Char('\n');
+            );
+            i = add[UInt](i, 1);
+        );
+        if multi_line then (
+            dec_indentation();
+        );
+        print_String(")");
+    ) else (
+        panic("Unmatched value kind in Value_print");
+    );
+);

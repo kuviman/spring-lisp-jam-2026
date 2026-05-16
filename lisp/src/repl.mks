@@ -20,12 +20,12 @@ const run_repl = () => (
         let reader = Reader_new(source);
         unwindable parse_loop @loop (
             with ErrorHandlerCtx = {
-                .error_at = (span :: Span, message :: () -> ()) => (
+                .error_at = (span :: Option[Span], message :: () -> ()) => (
                     log_error_at(span, message);
                     unwind parse_loop with ();
                 ),
             };
-            let sexpr = parse_sexpr(&reader);
+            let sexpr = parse(&reader);
             if sexpr.has_value then (
                 # Sexpr_print(&sexpr.value, true);
                 # print_String("\n"); 

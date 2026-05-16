@@ -20,7 +20,7 @@ const Reader_expect_eof = (reader :: &Reader) => (
     let peek = Reader_peek(reader);
     if peek.has_value then (
         error_at(
-            Span_zero_width(reader^.source.path, reader^.position),
+            Some[Span](Span_zero_width(reader^.source.path, reader^.position)),
             () => (
                 print_String("Expected EOF, got '");
                 print_Char(peek.value);

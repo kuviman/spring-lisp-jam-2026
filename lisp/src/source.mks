@@ -10,7 +10,7 @@ const Source_read_file = (path :: String) -> Source => (
     let path_c = String_to_C_String(path);
     let file :: &FILE = @native "fopen(\(path_c), \"r\")";
     if @native "!\(file)" then (
-        panic_with_errno();
+        error_with_errno(None[Span]());
     );
     @native "fseek(\(file), 0, SEEK_END)";
     let length :: UInt = @native "ftell(\(file))";

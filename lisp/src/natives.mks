@@ -1,30 +1,50 @@
-const add_natives = (locals :: &ArrayList[Local]) => (
+const add_natives = (locals :: &Locals) => (
     add_native_fn(locals, "print", native_print);
     add_native_fn(locals, "read_file", native_read_file);
     add_native_fn(locals, "parse", native_parse);
     add_native_fn(locals, "eval", native_eval);
     add_native_fn(locals, "values", native_values);
+    add_native_macro(locals, "quote", native_quote);
+    add_native_macro(locals, "define", native_define);
 );
 
-const add_native_fn = (
-    locals :: &ArrayList[Local],
+const add_native_macro = (
+    locals :: &Locals,
     name :: String,
     f :: (ArrayList[Value]) -> Value,
 ) => (
-    ArrayList_push_back[Local](
+    OrdMap_add[StringView, Value](
         locals,
+        name,
         {
-            .name = name,
-            .value = {
-                .kind = :NativeFn,
-                .data = {
-                    .native_fn = {
-                        .name = name,
-                        .f = f,
-                    },
+            .kind = :NativeMacro,
+            .data = {
+                .native_macro = {
+                    .name = name,
+                    .f = f,
                 },
             },
-        }
+        },
+    );
+);
+
+const add_native_fn = (
+    locals :: &Locals,
+    name :: String,
+    f :: (ArrayList[Value]) -> Value,
+) => (
+    OrdMap_add[StringView, Value](
+        locals,
+        name,
+        {
+            .kind = :NativeFn,
+            .data = {
+                .native_fn = {
+                    .name = name,
+                    .f = f,
+                },
+            },
+        },
     );
 );
 
@@ -43,7 +63,7 @@ const native_print = (args :: ArrayList[Value]) -> Value => (
         inc[UInt](&i);
     );
     print_Char('\n');
-    { .kind = :Unit, .data = { .unit = 0 } }
+    Value_unit()
 );
 
 const native_values = (args :: ArrayList[Value]) -> Value => {
@@ -108,4 +128,29 @@ const native_parse = (args :: ArrayList[Value]) -> Value => (
 
 const native_eval = (args :: ArrayList[Value]) -> Value => (
     eval(&expect_single_arg(args))
+);
+
+const native_quote = (args :: ArrayList[Value]) -> Value => (
+    expect_single_arg(args)
+);
+
+const native_define = (args :: ArrayList[Value]) -> Value => (
+    if not_equal[UInt](args.length, 2) then (
+        error_at(
+            None[Span](),
+            () => print_String("Expected exactly 2 arguments"),
+        );
+    );
+    let name_value = ArrayList_index[Value](&args, 0)^;
+    if name_value.kind == :Symbol then () else (
+        error_at(
+            name_value.span,
+            () => print_String("Name should be a symbol"),
+        );
+    );
+    let name = name_value.data.symbol;
+    let value = eval(ArrayList_index[Value](&args, 1));
+    let scope = @context.ScopeCtx;
+    OrdMap_add[StringView, Value](&scope^.locals, name, value);
+    Value_unit()
 );

@@ -1,0 +1,39 @@
+const KV = [K, V] struct {
+    .key :: K,
+    .value :: V,
+};
+
+const OrdMap = [K, V] struct {
+    .storage :: ArrayList[KV[K, V]],
+    # TODO StringView -> K
+    .eq :: (&StringView, &StringView) -> Bool,
+};
+
+const OrdMap_new = [K, V] (eq :: (&K, &K) -> Bool) -> OrdMap[K, V] => {
+    .storage = ArrayList_new[KV[K, V]](),
+    .eq = eq,
+};
+
+const OrdMap_get = [K, V] (map :: &OrdMap[K, V], key :: &K) -> Option[&V] => unwindable return_ (
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, map^.storage.length) then (
+            unwind loop with ();
+        );
+        let kv = ArrayList_index[KV[K, V]](&map^.storage, i);
+        if map^.eq(&kv^.key, key) then (
+            unwind return_ with Some[&V](&kv^.value);
+        );
+        inc[UInt](&i);
+    );
+    None[&V]()
+);
+
+const OrdMap_add = [K, V] (map :: &OrdMap[K, V], key :: K, value :: V) => (
+    let existing = OrdMap_get[K, V](map, &key);
+    if existing.has_value then (
+        existing.value^ = value;
+    ) else (
+        ArrayList_push_back[KV[K, V]](&map^.storage, { .key = key, .value = value });
+    );
+);

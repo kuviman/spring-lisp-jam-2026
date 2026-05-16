@@ -38,11 +38,11 @@ const C_String_index = (s :: &C_String, i :: UInt) -> &Char => (
     @native "&\(s^)[\(i)]"
 );
 
-const String_equal = (a :: String, b :: String) -> Bool => (
-    if not_equal[UInt](a.length, b.length) then (
+const String_equal = (a :: &StringView, b :: &StringView) -> Bool => (
+    if not_equal[UInt](a^.length, b^.length) then (
         false
     ) else (
-        @native "memcmp(\(a.contents), \(b.contents), \(a.length)) == 0"
+        @native "memcmp(\(a^.contents), \(b^.contents), \(a^.length)) == 0"
     )
 );
 

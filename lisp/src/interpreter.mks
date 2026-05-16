@@ -8,21 +8,18 @@ const Interpreter_new = () -> Interpreter => {
     .global_scope = {
         .parent = None[&Scope](),
         .locals = (
-            let locals = ArrayList_new[Local]();
+            let locals = OrdMap_new[StringView, Value](String_equal);
             add_natives(&locals);
             locals
         ),
     }
 };
 
-const Local = struct {
-    .name :: String,
-    .value :: Value,
-};
+const Locals = type OrdMap[StringView, Value];
 
 const Scope = struct {
     .parent :: Option[&Scope],
-    .locals :: ArrayList[Local],
+    .locals :: Locals,
 };
 
 const ScopeCtx = @context &Scope;
@@ -31,17 +28,10 @@ const lookup_var_in_scope = (
     span :: Option[Span],
     name :: String,
     scope :: &Scope,
-) -> Value => unwindable return_ (
-    let i :: UInt = 0;
-    unwindable loop @loop (
-        if greater_or_equal[UInt](i, scope^.locals.length) then (
-            unwind loop with ();
-        );
-        let local = ArrayList_index[Local](&scope^.locals, i);
-        if String_equal(local^.name, name) then (
-            unwind return_ with local^.value;
-        );
-        inc[UInt](&i);
+) -> &Value => unwindable return_ (
+    let local = OrdMap_get[StringView, Value](&scope^.locals, &name);
+    if local.has_value then (
+        unwind return_ with local.value;
     );
     if scope^.parent.has_value then (
         lookup_var_in_scope(span, name, scope^.parent.value)
@@ -54,25 +44,12 @@ const lookup_var_in_scope = (
                 print_String(" in scope");
             ),
         );
-        unreachable[Value]()
+        unreachable[&Value]()
     )
 );
 
-const lookup_var = (span :: Option[Span], name :: String) -> Value => (
+const lookup_var = (span :: Option[Span], name :: String) -> &Value => (
     lookup_var_in_scope(span, name, @current ScopeCtx)
-);
-# TODO minikast has a bug if i use this alias
-const EvalHandler = type (Span, ArrayList[Value]) -> Value;
-
-const eval_quote = (span :: Option[Span], args :: ArrayList[Value]) -> Value => (
-    if not_equal[UInt](args.length, 1) then (
-        error_at(
-            span,
-            () => print_String("quote expects exactly 1 arg"),
-        );
-    );
-    let result = ArrayList_index[Value](&args, 0)^;
-    result
 );
 
 const eval_call = (
@@ -81,6 +58,18 @@ const eval_call = (
     f :: Value,
     args :: ArrayList[Value],
 ) -> Value => unwindable return_ (
+    if f.kind == :NativeMacro then (
+        unwind return_ with f.data.native_macro.f(args);
+    );
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, args.length) then (
+            unwind loop with ();
+        );
+        let arg = ArrayList_index[Value](&args, i);
+        arg^ = eval(arg);
+        inc[UInt](&i);
+    );
     if f.kind == :NativeFn then (
         unwind return_ with f.data.native_fn.f(args);
     );
@@ -96,7 +85,7 @@ const eval_call = (
 
 const eval = (sexpr :: &Value) -> Value => unwindable return_ (
     if sexpr^.kind == :Symbol then (
-        unwind return_ with lookup_var(sexpr^.span, sexpr^.data.symbol);
+        unwind return_ with lookup_var(sexpr^.span, sexpr^.data.symbol)^;
     );
     if sexpr^.kind == :List then (
         let list = sexpr^.data.list;
@@ -107,6 +96,7 @@ const eval = (sexpr :: &Value) -> Value => unwindable return_ (
             };
         );
         let first = ArrayList_index[Value](&list, 0);
+        let fun = eval(first);
         let args = ArrayList_new[Value]();
         let i :: UInt = 1;
         unwindable loop @loop (
@@ -114,29 +104,6 @@ const eval = (sexpr :: &Value) -> Value => unwindable return_ (
                 unwind loop with ();
             );
             ArrayList_push_back[Value](&args, ArrayList_index[Value](&list, i)^);
-            inc[UInt](&i);
-        );
-        if first^.kind == :Symbol then (
-            let symbol = first^.data.symbol;
-            let handler :: Option[(Option[Span], ArrayList[Value]) -> Value] = unwindable block (
-                if String_equal(symbol, "quote") then (
-                    unwind block with Some[(Option[Span], ArrayList[Value]) -> Value](eval_quote);
-                );
-                None[(Option[Span], ArrayList[Value]) -> Value]()
-            );
-            if handler.has_value then (
-                unwind return_ with handler.value(sexpr^.span, args);
-            );
-        );
-        let fun = eval(first);
-        # TODO fix same variable name in C output of minikast
-        i :: UInt = 0;
-        unwindable loop2 @loop (
-            if greater_or_equal[UInt](i, args.length) then (
-                unwind loop2 with ();
-            );
-            let arg = ArrayList_index[Value](&args, i);
-            arg^ = eval(arg);
             inc[UInt](&i);
         );
         unwind return_ with eval_call(first^.span, sexpr^.span, fun, args);

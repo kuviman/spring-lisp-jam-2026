@@ -2,6 +2,7 @@ const ValueKind = enum {
     | :Unit
     | :String
     | :NativeFn
+    | :NativeMacro
     | :Symbol
     | :List
 };
@@ -15,6 +16,7 @@ const ValueData = union {
     .unit :: Int, # TODO () isnt working properly, should fix in minikast
     .string :: String,
     .native_fn :: NativeFn,
+    .native_macro :: NativeFn,
     .symbol :: String,
     .list :: ArrayList[Value],
 };
@@ -25,6 +27,12 @@ const Value = struct {
     .span :: Option[Span],
 };
 
+const Value_unit = () -> Value => {
+    .kind = :Unit,
+    .data = { .unit = 0 },
+    .span = None[Span](),
+};
+
 const Value_print = (value :: &Value) => (
     if value^.kind == :Unit then (
         print_String("()");
@@ -32,6 +40,10 @@ const Value_print = (value :: &Value) => (
         print_String_escaped(value^.data.string);
     ) else if value^.kind == :NativeFn then (
         print_String("<native fn ");
+        print_String(value^.data.native_fn.name);
+        print_String(">");
+    ) else if value^.kind == :NativeMacro then (
+        print_String("<native macro ");
         print_String(value^.data.native_fn.name);
         print_String(">");
     ) else if value^.kind == :Symbol then (

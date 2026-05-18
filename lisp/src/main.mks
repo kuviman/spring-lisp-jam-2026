@@ -1,4 +1,30 @@
 const main = () => (
+    with ErrorHandlerCtx = {
+        .error_at = (span :: Option[Span], message :: () -> ()) => (
+            log_error_at(span, message);
+            @native "exit(-1)";
+        ),
+    };
     with PrintContext = PrintContext_new();
-    run_repl();
+    with InterpreterCtx = Interpreter_new();
+    with ScopeCtx = &(@current InterpreterCtx).global_scope;
+    if greater[UInt](@context.program_args.length, 1) then (
+        let i :: UInt = 1;
+        unwindable loop @loop (
+            if greater_or_equal[UInt](i, @context.program_args.length) then (
+                unwind loop with ();
+            );
+            let arg = Array_index[C_String](&@context.program_args, i)^;
+            let path = C_String_into_String(arg);
+            let source = Source_read_file(path);
+            let value = eval_source(source);
+            if not(value.kind == :Unit) then (
+                Value_print(&value);
+                print_String("\n");
+            );
+            inc[UInt](&i);
+        );
+    ) else (
+        run_repl();
+    );
 );

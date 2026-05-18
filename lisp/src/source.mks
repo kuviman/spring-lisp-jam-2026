@@ -17,11 +17,12 @@ const Source_read_file = (path :: String) -> Source => (
     @native "fseek(\(file), 0, SEEK_SET)";
     let buffer = C_String_allocate(length);
     @native "fread(\(buffer), 1, length, \(file))";
+    let contents :: String = {
+        .contents = buffer,
+        .length = length,
+    };
     {
-        .contents = {
-            .contents = buffer,
-            .length = length,
-        },
+        .contents = contents,
         .path = path,
     }
 );

@@ -52,6 +52,41 @@ const lookup_var = (span :: Option[Span], name :: String) -> &Value => (
     lookup_var_in_scope(span, name, @current ScopeCtx)
 );
 
+const call_user_fn = (
+    span :: Option[Span],
+    f :: UserFn,
+    args :: ArrayList[Value],
+) -> Value => (
+    if not_equal[UInt](f.args.length, args.length) then (
+        error_at(
+            None[Span](),
+            () => (
+                print_String("Expected ");
+                print_UInt(f.args.length);
+                print_String(" args, got ");
+                print_UInt(args.length);
+            ),
+        );
+    );
+    let locals = OrdMap_new[String, Value](String_equal);
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, f.args.length) then (
+            unwind loop with ();
+        );
+        let name = ArrayList_index[String](&f.args, i)^;
+        let value = ArrayList_index[Value](&args, i)^;
+        OrdMap_add[String, Value](&locals, name, value);
+        inc[UInt](&i);
+    );
+    let f_scope :: Scope = {
+        .parent = Some[&Scope](@context.ScopeCtx),
+        .locals = locals,
+    };
+    with ScopeCtx = &f_scope;
+    eval(&f.body^)
+);
+
 const eval_call = (
     f_span :: Option[Span],
     span :: Option[Span],
@@ -72,6 +107,9 @@ const eval_call = (
     );
     if f.kind == :NativeFn then (
         unwind return_ with f.data.native_fn.f(args);
+    );
+    if f.kind == :UserFn then (
+        unwind return_ with call_user_fn(span, f.data.user_fn, args);
     );
     error_at(
         f_span,
@@ -106,4 +144,18 @@ const eval = (sexpr :: &Value) -> Value => unwindable return_ (
         unwind return_ with eval_call(first^.span, sexpr^.span, fun, args);
     );
     sexpr^
+);
+
+const eval_source = (source :: Source) -> Value => (
+    let reader = Reader_new(source);
+    let sexpr = parse(&reader);
+    if sexpr.has_value then (
+        # Sexpr_print(&sexpr.value, true);
+        # print_String("\n"); 
+        Parser_skip_whitespace(&reader);
+        Reader_expect_eof(&reader);
+        eval(&sexpr.value)
+    ) else (
+        Value_unit()
+    )
 );

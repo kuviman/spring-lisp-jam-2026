@@ -6,6 +6,7 @@ const add_natives = (locals :: &Locals) => (
     add_native_fn(locals, "values", native_values);
     add_native_macro(locals, "quote", native_quote);
     add_native_macro(locals, "define", native_define);
+    add_native_macro(locals, "lambda", native_lambda);
     add_natives_math(locals);
 );
 
@@ -135,6 +136,39 @@ const native_eval = (args :: ArrayList[Value]) -> Value => (
 
 const native_quote = (args :: ArrayList[Value]) -> Value => (
     expect_single_arg(args)
+);
+
+const native_lambda = (def :: ArrayList[Value]) -> Value => (
+    if not_equal[UInt](def.length, 2) then (
+        error_at(
+            None[Span](),
+            () => print_String("Expected exactly 2 arguments"),
+        );
+    );
+    let args = ArrayList_new[String]();
+    let args_list = Value_into_list(ArrayList_index[Value](&def, 0)^);
+    let i :: UInt = 0;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, args_list.length) then (
+            unwind loop with ();
+        );
+        ArrayList_push_back[String](
+            &args,
+            Value_into_symbol(ArrayList_index[Value](&args_list, i)^),
+        );
+        inc[UInt](&i);
+    );
+    let body = allocate_type_on_heap[Value]();
+    body^ = ArrayList_index[Value](&def, 1)^;
+    let user_fn :: UserFn = {
+        .args = args,
+        .body = body,
+    };
+    {
+        .kind = :UserFn,
+        .data = { .user_fn = user_fn },
+        .span = None[Span](),
+    }
 );
 
 const native_define = (args :: ArrayList[Value]) -> Value => (

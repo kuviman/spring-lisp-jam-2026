@@ -1,0 +1,81 @@
+const add_natives_math = (locals :: &Locals) => (
+    add_native_fn(locals, "+", native_add);
+    add_native_fn(locals, "-", native_sub);
+    add_native_fn(locals, "*", native_mul);
+    add_native_fn(locals, "/", native_div);
+    add_native_fn(locals, "floor", native_floor);
+    add_native_fn(locals, "ceil", native_ceil);
+    add_native_fn(locals, "round", native_round);
+);
+
+const native_floor = (args :: ArrayList[Value]) -> Value => (
+    let arg = Value_as_number(&expect_single_arg(args));
+    let result :: Float64 = @native "floor(\(arg))";
+    {
+        .kind = :Number,
+        .data = { .number = result },
+        .span = None[Span](),
+    }
+);
+
+const native_ceil = (args :: ArrayList[Value]) -> Value => (
+    let arg = Value_as_number(&expect_single_arg(args));
+    let result :: Float64 = @native "ceil(\(arg))";
+    {
+        .kind = :Number,
+        .data = { .number = result },
+        .span = None[Span](),
+    }
+);
+
+const native_round = (args :: ArrayList[Value]) -> Value => (
+    let arg = Value_as_number(&expect_single_arg(args));
+    let result :: Float64 = @native "round(\(arg))";
+    {
+        .kind = :Number,
+        .data = { .number = result },
+        .span = None[Span](),
+    }
+);
+
+const native_add = (args :: ArrayList[Value]) -> Value => (
+    math_op(args, add[Number], 0)
+);
+
+const native_sub = (args :: ArrayList[Value]) -> Value => (
+    math_op(args, sub[Number], 0)
+);
+
+const native_mul = (args :: ArrayList[Value]) -> Value => (
+    math_op(args, mul[Number], 1)
+);
+
+const native_div = (args :: ArrayList[Value]) -> Value => (
+    math_op(args, div[Number], 1)
+);
+
+const math_op = (
+    args :: ArrayList[Value],
+    op :: @call "C" (Number, Number) -> Number,
+    init_value :: Number,
+) -> Value => (
+    let result = if equal[UInt](args.length, 0) then (
+        init_value
+    ) else (
+        Value_as_number(ArrayList_index[Value](&args, 0))
+    );
+    let i :: UInt = 1;
+    unwindable loop @loop (
+        if greater_or_equal[UInt](i, args.length) then (
+            unwind loop with ();
+        );
+        let arg = Value_as_number(ArrayList_index[Value](&args, i));
+        result = op(result, arg);
+        inc[UInt](&i);
+    );
+    {
+        .kind = :Number,
+        .data = { .number = result },
+        .span = None[Span](),
+    }
+);

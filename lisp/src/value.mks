@@ -13,9 +13,11 @@ const NativeFn = struct {
     .f :: (ArrayList[Value]) -> Value,
 };
 
+const Number = type Float64;
+
 const ValueData = union {
     .unit :: Int, # TODO () isnt working properly, should fix in minikast
-    .number :: Float64,
+    .number :: Number,
     .string :: String,
     .native_fn :: NativeFn,
     .native_macro :: NativeFn,
@@ -35,7 +37,22 @@ const Value_unit = () -> Value => {
     .span = None[Span](),
 };
 
-const print_Number = (x :: Float64) => (
+const Value_as_number = (value :: &Value) -> Number => (
+    if value^.kind == :Number then (
+        value^.data.number
+    ) else (
+        error_at(
+            value^.span,
+            () => (
+                print_String("Expected a number, got ");
+                Value_print(value);
+            ),
+        );
+        unreachable[Number]()
+    )
+);
+
+const print_Number = (x :: Number) => (
     @native "#include <math.h>";
     if @native "round(\(x)) == \(x)" then (
         print_Int(@native "(int)\(x)");

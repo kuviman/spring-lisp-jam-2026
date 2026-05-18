@@ -3,10 +3,10 @@ const unreachable = [T] () -> T => (
     uninitialized
 );
 
-const Int_to_Float64 = (x :: Int) -> Float64 => (
+const Int_to_Float64 = @call "C" (x :: Int) -> Float64 => (
     @native "(double)\(x)"
 );
 
-const div = [T] (a :: T, b :: T) -> T => (
+const div = [T] @call "C" (a :: T, b :: T) -> T => (
     @native "\(a) / \(b)"
 );

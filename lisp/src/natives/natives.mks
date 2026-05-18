@@ -6,6 +6,7 @@ const add_natives = (locals :: &Locals) => (
     add_native_fn(locals, "values", native_values);
     add_native_macro(locals, "quote", native_quote);
     add_native_macro(locals, "define", native_define);
+    add_natives_math(locals);
 );
 
 const add_native_macro = (

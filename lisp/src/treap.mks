@@ -1,5 +1,3 @@
-const Box = [T] type &T;
-
 const Treap_Node = [T] struct {
     .value :: T,
     .priority :: Int,

@@ -10,14 +10,6 @@ const Char_is_whitespace = (c :: Char) -> Bool => (
     Bool_or(equal[Char](c, ' '), equal[Char](c, '\n'))
 );
 
-const inc = [T] (x :: &T) => (
-    x^ = add[T](x^, 1);
-);
-
-const dec = [T] (x :: &T) => (
-    x^ = sub[T](x^, 1);
-);
-
 const unreachable = [T] () -> T => (
     panic("unreachable was reached");
     uninitialized

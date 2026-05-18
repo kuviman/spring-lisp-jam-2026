@@ -8,14 +8,14 @@ const Interpreter_new = () -> Interpreter => {
     .global_scope = {
         .parent = None[&Scope](),
         .locals = (
-            let locals = OrdMap_new[StringView, Value](String_equal);
+            let locals = OrdMap_new[String, Value](String_equal);
             add_natives(&locals);
             locals
         ),
     }
 };
 
-const Locals = type OrdMap[StringView, Value];
+const Locals = type OrdMap[String, Value];
 
 const Scope = struct {
     .parent :: Option[&Scope],
@@ -29,7 +29,7 @@ const lookup_var_in_scope = (
     name :: String,
     scope :: &Scope,
 ) -> &Value => unwindable return_ (
-    let local = OrdMap_get[StringView, Value](&scope^.locals, &name);
+    let local = OrdMap_get[String, Value](&scope^.locals, &name);
     if local.has_value then (
         unwind return_ with local.value;
     );
@@ -90,10 +90,7 @@ const eval = (sexpr :: &Value) -> Value => unwindable return_ (
     if sexpr^.kind == :List then (
         let list = sexpr^.data.list;
         if equal[UInt](list.length, 0) then (
-            unwind return_ with {
-                .kind = :Unit,
-                .data = { .unit = 0 },
-            };
+            unwind return_ with Value_unit();
         );
         let first = ArrayList_index[Value](&list, 0);
         let fun = eval(first);

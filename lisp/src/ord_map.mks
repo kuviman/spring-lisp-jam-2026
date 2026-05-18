@@ -5,8 +5,7 @@ const KV = [K, V] struct {
 
 const OrdMap = [K, V] struct {
     .storage :: ArrayList[KV[K, V]],
-    # TODO StringView -> K
-    .eq :: (&StringView, &StringView) -> Bool,
+    .eq :: (&K, &K) -> Bool,
 };
 
 const OrdMap_new = [K, V] (eq :: (&K, &K) -> Bool) -> OrdMap[K, V] => {

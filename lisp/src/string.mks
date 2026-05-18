@@ -38,7 +38,7 @@ const C_String_index = (s :: &C_String, i :: UInt) -> &Char => (
     @native "&\(s^)[\(i)]"
 );
 
-const String_equal = (a :: &StringView, b :: &StringView) -> Bool => (
+const String_equal = (a :: &String, b :: &String) -> Bool => (
     if not_equal[UInt](a^.length, b^.length) then (
         false
     ) else (
@@ -46,7 +46,7 @@ const String_equal = (a :: &StringView, b :: &StringView) -> Bool => (
     )
 );
 
-const substring = (s :: &StringView, start :: UInt, end :: UInt) -> StringView => (
+const substring = (s :: &String, start :: UInt, end :: UInt) -> StringView => (
     {
         .contents = @native "\(s^.contents) + \(start)",
         .length = sub[UInt](end, start),

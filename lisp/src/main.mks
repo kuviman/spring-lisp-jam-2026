@@ -1,13 +1,4 @@
 const main = () => (
-    with PanicHandler = (
-        (s :: String) => (
-            print_String("ERROR: ");
-            print_String(s);
-            print_String("\n");
-            @native "exit(-1)";
-        )
-    );
-
     with PrintContext = PrintContext_new();
     run_repl();
 );

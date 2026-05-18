@@ -18,7 +18,7 @@ const dec_indentation = () => (
     dec[Int](&(@current PrintContext).indentation);
 );
 
-const write_String = (s :: StringView) => (
+const write_String = (s :: String) => (
     @native "#include <stdio.h>";
     @native "fwrite(\(s.contents), sizeof(char), \(s.length), stdout)";
 );
@@ -49,7 +49,7 @@ const print_String_escaped = (s :: String) => (
     print_Char('"');
 );
 
-const print_String = (s :: StringView) => (
+const print_String = (s :: String) => (
     let i :: UInt = 0;
     unwindable loop @loop (
         if greater_or_equal[UInt](i, s.length) then (

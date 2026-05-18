@@ -13,7 +13,7 @@ const add_native_macro = (
     name :: String,
     f :: (ArrayList[Value]) -> Value,
 ) => (
-    OrdMap_add[StringView, Value](
+    OrdMap_add[String, Value](
         locals,
         name,
         {
@@ -24,6 +24,7 @@ const add_native_macro = (
                     .f = f,
                 },
             },
+            .span = None[Span](),
         },
     );
 );
@@ -33,7 +34,7 @@ const add_native_fn = (
     name :: String,
     f :: (ArrayList[Value]) -> Value,
 ) => (
-    OrdMap_add[StringView, Value](
+    OrdMap_add[String, Value](
         locals,
         name,
         {
@@ -44,6 +45,7 @@ const add_native_fn = (
                     .f = f,
                 },
             },
+            .span = None[Span](),
         },
     );
 );
@@ -151,6 +153,6 @@ const native_define = (args :: ArrayList[Value]) -> Value => (
     let name = name_value.data.symbol;
     let value = eval(ArrayList_index[Value](&args, 1));
     let scope = @context.ScopeCtx;
-    OrdMap_add[StringView, Value](&scope^.locals, name, value);
+    OrdMap_add[String, Value](&scope^.locals, name, value);
     Value_unit()
 );

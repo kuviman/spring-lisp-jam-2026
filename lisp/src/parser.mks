@@ -86,6 +86,50 @@ const parse = (reader :: &Reader) -> Option[Value] => unwindable return_ (
         Reader_advance(reader);
         result.kind = :String;
         result.data = { .string = string };
+    ) else if Char_is_digit(peek.value) then (
+        let number :: Float64 = 0;
+        let had_dot = false;
+        let after_dot_multiplier :: Float64 = 0.1;
+        unwindable loop @loop (
+            peek = Reader_peek(reader);
+            if Char_is_digit(peek.value) then (
+                let digit = Int_to_Float64(Char_as_digit(peek.value));
+                if had_dot then (
+                    number = add[Float64](
+                        number,
+                        mul[Float64](after_dot_multiplier, digit),
+                    );
+                    after_dot_multiplier = div[Float64](after_dot_multiplier, 10);
+                ) else (
+                    number = add[Float64](
+                        mul[Float64](number, 10),
+                        digit,
+                    );
+                );
+                Reader_advance(reader);
+            ) else if equal[Char](peek.value, '.') then (
+                if had_dot then (
+                    error_at(
+                        Some[Span](
+                            {
+                                .path = reader^.source.path,
+                                .start = start,
+                                .end = reader^.position,
+                            }
+                        ),
+                        () => (
+                            print_String("Can only have single '.' in a number");
+                        )
+                    );
+                );
+                had_dot = true;
+                Reader_advance(reader);
+            ) else (
+                unwind loop with ();
+            );
+        );
+        result.kind = :Number;
+        result.data = { .number = number };
     ) else (
         let start_pos = reader^.position;
         unwindable loop @loop (

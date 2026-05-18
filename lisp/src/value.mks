@@ -1,5 +1,6 @@
 const ValueKind = enum {
     | :Unit
+    | :Number
     | :String
     | :NativeFn
     | :NativeMacro
@@ -14,6 +15,7 @@ const NativeFn = struct {
 
 const ValueData = union {
     .unit :: Int, # TODO () isnt working properly, should fix in minikast
+    .number :: Float64,
     .string :: String,
     .native_fn :: NativeFn,
     .native_macro :: NativeFn,
@@ -33,9 +35,20 @@ const Value_unit = () -> Value => {
     .span = None[Span](),
 };
 
+const print_Number = (x :: Float64) => (
+    @native "#include <math.h>";
+    if @native "round(\(x)) == \(x)" then (
+        print_Int(@native "(int)\(x)");
+    ) else (
+        print_Float64(x);
+    );
+);
+
 const Value_print = (value :: &Value) => (
     if value^.kind == :Unit then (
         print_String("()");
+    ) else if value^.kind == :Number then (
+        print_Number(value^.data.number);
     ) else if value^.kind == :String then (
         print_String_escaped(value^.data.string);
     ) else if value^.kind == :NativeFn then (

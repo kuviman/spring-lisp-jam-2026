@@ -1,0 +1,15 @@
+const Char_ord = (c :: Char) -> Int => (
+    @native "(int)\(c)"
+);
+
+const Char_is_digit = (c :: Char) -> Bool => (
+    @"and"(greater_or_equal[Char](c, '0'), less_or_equal[Char](c, '9'))
+);
+
+const Char_as_digit = (c :: Char) -> Int => (
+    sub[Int](Char_ord(c), Char_ord('0'))
+);
+
+const Char_is_whitespace = (c :: Char) -> Bool => (
+    @"or"(equal[Char](c, ' '), equal[Char](c, '\n'))
+);

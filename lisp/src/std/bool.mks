@@ -1,0 +1,11 @@
+const not = (b :: Bool) -> Bool => (
+    @native "!\(b)"
+);
+
+const @"and" = (a :: Bool, b :: Bool) -> Bool => (
+    @native "\(a) && \(b)"
+);
+
+const @"or" = (a :: Bool, b :: Bool) -> Bool => (
+    @native "\(a) || \(b)"
+);

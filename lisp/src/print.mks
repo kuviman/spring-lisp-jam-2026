@@ -76,6 +76,10 @@ const print_indentation_if_not_yet = () => (
     );
 );
 
+const print_Float64 = (x :: Float64) => (
+    @native "printf(\"%lf\", \(x))";
+);
+
 const print_Char = (c :: Char) => (
     if equal[Char](c, '\n') then (
         (@current PrintContext).printed_indentation = false;
